@@ -1,21 +1,16 @@
 from src.node.address import Address
-from src.node.nodeInfo import NodeInfo
+from src.mesh.mesh import Mesh
+from src.mesh.networkView import NetworkView
+from src.mesh.nodeInfo import NodeInfo
 from src.cluster.cluster import ClusterConfiguration
 from src.message.messageFactory import MessageFactory
-from src.message.messages_pb2 import Message, NodeInfoProto, Gossip, JoinAccept, NetworkView, Ping, PingReq, Ack
-from src.node.neighborManager import NeighborManager
+from src.message.messages_pb2 import Message, NodeInfoProto, JoinAccept
 from src.service.service import ServiceManager
-from src.gossip.gossipManager import GossipManager
-from src.swim.swimProtocol import SwimManager
-import zmq
-from zmq.asyncio import Context
 from enum import Enum
-import time
+import zmq
+import zmq.asyncio
 import uuid
-import random
 import asyncio
-import functools
-
 
 
 class NodeConnectionConfiguration():
@@ -37,19 +32,15 @@ class NodeConfiguration():
 class Node():
     def __init__(self,
             eventLoop: asyncio.BaseEventLoop,
-            zmqContext: zmq.Context,
-            neighborManager: NeighborManager,
-            gossipManager: GossipManager,
-            swimManager: SwimManager,
+            zmqContext: zmq.asyncio.Context,
+            mesh: Mesh,
             serviceManager: ServiceManager,
             config = NodeConfiguration()):
         '''set basic resources'''
-        self.zmqContext = zmqContext
         self.loop = eventLoop
-        self.neighborManager = neighborManager
+        self.zmqContext = zmqContext
+        self.mesh = mesh
         self.serviceManager = serviceManager
-        self.gossipManager = gossipManager
-        self.swimManager = swimManager
 
         '''unpack cluster info from config'''
         self.connectionConfig = config.connectionConfig
@@ -57,48 +48,8 @@ class Node():
         self.clusterWorkAddr = config.clusterConfig.workAddr
         self.clusterClientAddr = config.clusterConfig.clientAddr
 
-        '''set up local node info'''
-        self.info = NodeInfo(config.addr, config.name, 1, 
-            gossip_addr=gossipManager.gossip_addr)
-        self.gossipManager.setLocalNodeInfo(self.info)
-        self.neighborManager.setLocalNodeInfo(self.info)
-        self.swimManager.setLocalNodeInfo(self.info)
-        self.neighborManager.newNodeDelegates.append( self.gossipNewNode )
-        self.neighborManager.nodeHealthChangeDelegates.append( self.gossipNodeHealthChange )
-        self.neighborManager.refuteNotAliveDelegates.append(self.refuteNotAlive)
-
-    async def gossipNewNode(self, nodeInfo: NodeInfo) -> None:
-        #print(f"GOSSIPING ABOUT NEW NODE: {nodeInfo.name} : {nodeInfo.addr}")
-        msg, gossipMsg = MessageFactory.newGossipMessage(self.info)
-        nodeInfoProto = nodeInfo.toProto()
-        gossipMsg.message.Pack(nodeInfoProto)
-        msg.message.Pack(gossipMsg)
-        await self.gossipManager.gossipQueue.put(msg.SerializeToString())
-        return None
-
-    async def gossipNodeHealthChange(self, nodeInfo: NodeInfo) -> None:
-        print(f"GOSSIPING ABOUT NODE HEALTH CHANGE: {nodeInfo.name} : {nodeInfo.addr} {nodeInfo.health.name}")
-        msg, gossipMsg = MessageFactory.newGossipMessage(self.info)
-        nodeInfoProto = nodeInfo.toProto()
-        gossipMsg.message.Pack(nodeInfoProto)
-        msg.message.Pack(gossipMsg)
-        await self.gossipManager.gossipQueue.put(msg.SerializeToString())
-        print("GOSSIP ABOUT NODE HEALTH CHANGE WAS ENQUEUED!!!")
-        return None
-
-    async def refuteNotAlive(self) -> None:
-        self.info.nextIncarnation()
-        msg, gossipMsg = MessageFactory.newGossipMessage(self.info)
-        nodeInfoProto = self.info.toProto()
-        gossipMsg.message.Pack(nodeInfoProto)
-        msg.message.Pack(gossipMsg)
-        await self.gossipManager.gossipQueue.put(msg.SerializeToString())
-        print("REFUTED NOT ALIVE REPORT")
-        return None
-
-
-    async def join(self, cluster: Address) -> bool:
-        joinMsg = MessageFactory.newJoinRequestMessage(self.info).SerializeToString()
+    async def join(self, cluster: Address) -> Message:
+        joinMsg = MessageFactory.newJoinRequestMessage(self.mesh.localNode).SerializeToString()
         joinSocket = self.zmqContext.socket(zmq.REQ)
         joinSocket.connect(f'tcp://{self.clusterJoinAddr}')
 
@@ -107,81 +58,13 @@ class Node():
         respMsg = MessageFactory.newFromString(data)
         joinAccept = JoinAccept()
         respMsg.message.Unpack(joinAccept)
-        self.neighborManager.updateWithNetworkViewMessage(joinAccept.networkView)
-
+        self.mesh.neighborManager.updateWithNetworkViewMessage( NetworkView.fromProto(joinAccept.networkView) )
         return respMsg
 
-    async def sendGreeting(self, nodeInfo: NodeInfo):
-        sock = self.zmqContext.socket(zmq.REQ)
-        sock.connect(f'tcp://{nodeInfo.addr}')
-        msg = MessageFactory.newPingMessage(self.info)
-        #print(f"Sending to peer {nodeInfo.addr}")
-        await sock.send(msg.SerializeToString())
-        #print(f"Waiting for response from peer...")
-        data = await sock.recv()
-        respMsg = MessageFactory.newFromString(data)
-        #print(f"Received response from peer: {respMsg}")
-
-
-    async def handleDirectMessages(self):
-        '''bind to direct messaging port'''
-        self.zmqSocket = self.zmqContext.socket(zmq.ROUTER)
-        if self.info.addr.port is None:
-            '''bind to random port and then set address port'''
-            port_selected = self.zmqSocket.bind_to_random_port('tcp://*',
-                min_port=self.connectionConfig.min_port,
-                max_port=self.connectionConfig.max_port,
-                max_tries=self.connectionConfig.max_connect_retries)
-            self.info.addr.port = port_selected
-            zmqAddr = f'tcp://*:{self.info.addr.port}'
-        else:
-            zmqAddr = f'tcp://*:{self.info.addr.port}'
-            self.zmqSocket.bind(zmqAddr)
-
-        print(f"Listening on {zmqAddr}...")
-
-        '''report self to neighbor manager'''
-        self.neighborManager.registerNode(self.info)
-
-        '''handle incoming'''
-        while True:
-            zmqAddress, empty, data = await self.zmqSocket.recv_multipart()
-            self.loop.create_task(self.handle_direct_message(zmqAddress, empty, data))
-
-
-    async def handle_direct_message(self, zmqAddress, empty, data:str):
-        msg = MessageFactory.newFromString(data)
-        #print(f"Handling direct message: {msg}")
-
-        if msg.message.Is(Ping.DESCRIPTOR):
-            self.loop.create_task(self.ack_message(zmqAddress, empty, msg))
-        elif msg.message.Is(PingReq.DESCRIPTOR):
-            self.loop.create_task(self.handle_ping_req(zmqAddress, empty, msg))
-        else:
-            print("Unknown message type...")
-
-    async def ack_message(self, zmqAddress, empty, msg: Message) -> None:
-        #print(f"Sending ACK message")
-        ackMsg = MessageFactory.newAckMessage(self.info)
-        multipart = [ zmqAddress, empty, ackMsg.SerializeToString() ]
-        await self.zmqSocket.send_multipart(multipart)
-        return None
-
-    async def handle_ping_req(self, zmqAddress, empty, msg: Message):
-        print(f"handle_ping_req not implemented")
+    async def leave(self, cluster: Address) -> None:
         pass
-
-
-    async def periodicallyReportNetworkView(self):
-        while True:
-            await asyncio.sleep(5)
-            self.neighborManager.reportState()
-
-
-    def nextIncarnation(self):
-        return self.info.nextIncarnation()
 
     def start(self):
-        pass
+        self.mesh.start(self.loop)
 
 

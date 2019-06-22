@@ -1,7 +1,7 @@
-from src.node.neighborManager import NeighborManager
-from src.node.nodeInfo import NodeInfo, NodeHealth
-from src.message.messageFactory import MessageFactory
-from src.message.messages_pb2 import Ping, PingReq, Ack
+from src.mesh.neighborManager import NeighborManager
+from src.mesh.nodeInfo import NodeInfo, NodeHealth
+from src.mesh.messages.MessageFactory import MeshMessageFactory
+from src.mesh.messages.messages_pb2 import Ping, PingReq, Ack
 from src.node.address import Address
 import zmq
 import random
@@ -120,7 +120,7 @@ class SwimManager():
 
 
     async def ping(self, targetNode: NodeInfo) -> NodeInfo:
-        pingMsg = MessageFactory.newPingMessage( self.localNode, targetNode )
+        pingMsg = MeshMessageFactory.newPingMessage( self.localNode, targetNode.name, targetNode.swim_addr )
         try:
             sendReceiveTask = self.loop.create_task(self.sendReceive(targetNode, pingMsg.SerializeToString()))
             receivedData = await asyncio.wait_for(sendReceiveTask, timeout = self.config.pingTimeout)
@@ -129,7 +129,7 @@ class SwimManager():
             print("Ping request timed out")
             return None
 
-        msg = MessageFactory.newFromString(receivedData)
+        msg = MeshMessageFactory.newFromString(receivedData)
         senderInfo = NodeInfo.fromProto(msg.senderInfo)
         if not senderInfo.isSameNodeAs(targetNode):
             print(f"ERROR: Unexpected Node Info received:")
@@ -143,7 +143,7 @@ class SwimManager():
             return None
     
     async def ping_req(self, targetNode: NodeInfo, bridgeNode: NodeInfo) -> NodeInfo:
-        pingReqMsg = MessageFactory.newPingRequestMessage( self.localNode, targetNode )
+        pingReqMsg = MeshMessageFactory.newPingRequestMessage( self.localNode, targetNode.name, targetNode.swim_addr )
         try:
             sendReceiveTask = self.loop.create_task(self.sendReceive(bridgeNode, pingReqMsg.SerializeToString()))
             receivedData = await asyncio.wait_for(sendReceiveTask, timeout = self.config.pingReqTimeout)
@@ -152,7 +152,7 @@ class SwimManager():
             print("Ping request timed out")
             return None
 
-        msg = MessageFactory.newFromString(receivedData)
+        msg = MeshMessageFactory.newFromString(receivedData)
         senderInfo = NodeInfo.fromProto(msg.senderInfo)
 
         if not senderInfo.isSameNodeAs(targetNode):
@@ -212,7 +212,7 @@ class SwimManager():
 
 
     async def handle_direct_message(self, zmqAddress, empty, data:str):
-        msg = MessageFactory.newFromString(data)
+        msg = MeshMessageFactory.newFromString(data)
         #print(f"Handling direct message: {msg}")
 
         if msg.message.Is(Ping.DESCRIPTOR):
@@ -225,7 +225,7 @@ class SwimManager():
 
 
     async def handle_ping(self, zmqAddress, empty, msg: Message) -> None:
-        ackMsg = MessageFactory.newAckMessage(self.info)
+        ackMsg = MeshMessageFactory.newAckMessage(self.localNode)
         multipart = [ zmqAddress, empty, ackMsg.SerializeToString() ]
         await self.swim_sock.send_multipart(multipart)
         return None
@@ -235,7 +235,10 @@ class SwimManager():
         '''unpack ping request target info'''
         pingReqMsg = PingReq()
         msg.message.Unpack(pingReqMsg)
-        targetNode = NodeInfo.fromProto(pingReqMsg.targetInfo)
+        targetNode = self.neighborManager.getNodeInfo(pingReqMsg.targetName)
+        targetAddr = Address.fromProtoAddress(pingReqMsg.targetAddress)
+        if targetNode.swim_addr != targetAddr:
+            print(f"ERROR: For {targetNode.name}, have target address {targetNode.swim_addr} but received target address {targetAddr}")
 
         print(f"Performing PING REQ check for {targetNode.name} @ {targetNode.swim_addr}")
         receivedNodeInfo = await self.ping(targetNode)
@@ -246,7 +249,7 @@ class SwimManager():
                 receivedNodeInfo.health, 
                 receivedNodeInfo.incarnation)
             
-            ackMsg = MessageFactory.newAckMessage(receivedNodeInfo)
+            ackMsg = MeshMessageFactory.newAckMessage(receivedNodeInfo)
             multipart = [ zmqAddress, empty, ackMsg.SerializeToString() ]
             await self.swim_sock.send_multipart(multipart)
         else:

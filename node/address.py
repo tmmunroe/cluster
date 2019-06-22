@@ -11,3 +11,11 @@ class Address():
 
     def __eq__(self, other: object):
         return (self.host == other.host) and (self.port == other.port)
+
+    def packProtoAddress(self, protoAddr):
+        protoAddr.host = self.host
+        protoAddr.port = self.port
+
+    @classmethod
+    def fromProtoAddress(self, protoAddr):
+        return Address(protoAddr.host, protoAddr.port)

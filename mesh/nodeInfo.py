@@ -1,7 +1,6 @@
 from src.node.address import Address
-from src.message.messages_pb2 import NodeInfoProto
+from src.mesh.messages.messages_pb2 import NodeInfoProto
 from enum import Enum
-from collections import namedtuple
 
 class NodeHealth(Enum):
     DEAD = NodeInfoProto.NodeHealth.DEAD
@@ -28,9 +27,9 @@ class NodeInfo():
     
     @classmethod
     def fromProto(self, nodeInfoProto: NodeInfoProto):
-        addr = Address(nodeInfoProto.host, nodeInfoProto.port)
-        gossip_addr = Address(nodeInfoProto.gossipHost, nodeInfoProto.gossipPort)
-        swim_addr = Address(nodeInfoProto.swimHost, nodeInfoProto.swimPort)
+        addr = Address(nodeInfoProto.addr.host, nodeInfoProto.addr.port)
+        gossip_addr = Address(nodeInfoProto.gossip_addr.gossipHost, nodeInfoProto.gossip_addr.gossipPort)
+        swim_addr = Address(nodeInfoProto.swim_addr.swimHost, nodeInfoProto.swim_addr.swimPort)
         health_dec = NodeHealth(nodeInfoProto.health)
         return NodeInfo(addr,
             nodeInfoProto.name, 
@@ -42,14 +41,14 @@ class NodeInfo():
     def toProto(self) -> NodeInfoProto:
         nodeInfoProto = NodeInfoProto()
         nodeInfoProto.name = self.name
-        nodeInfoProto.host = self.addr.host
-        nodeInfoProto.port = self.addr.port
-        nodeInfoProto.gossipHost = self.gossip_addr.host
-        nodeInfoProto.gossipPort = self.gossip_addr.port
-        nodeInfoProto.swimHost = self.swim_addr.host
-        nodeInfoProto.swimPort = self.swim_addr.port
         nodeInfoProto.incarnation = self.incarnation
         nodeInfoProto.health = self.health.value
+        if self.addr:
+            self.addr.packProtoAddress(msg.senderInfo.addr)
+        if self.gossip_addr:
+            self.gossip_addr.packProtoAddress(msg.senderInfo.gossip_addr)
+        if self.swim_addr:
+            self.swim_addr.packProtoAddress(msg.senderInfo.swim_addr)
         return nodeInfoProto
     
     def isSameNodeAs(self, other: object) -> bool:

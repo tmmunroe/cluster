@@ -1,7 +1,7 @@
 from src.node.neighborManager import NeighborManager
 from src.node.nodeInfo import NodeInfo, NodeHealth
-from src.message.messages_pb2 import Message, Gossip, NodeInfoProto
-from src.message.messageFactory import MessageFactory
+from src.mesh.messages.messages_pb2 import Message, Gossip, NodeInfoProto
+from src.mesh.messages.messageFactory import MessageFactory
 from src.node.address import Address
 import zmq
 import queue

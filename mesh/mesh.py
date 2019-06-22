@@ -5,6 +5,7 @@ from src.mesh.nodeInfo import NodeInfo
 from src.message.messageFactory import MessageFactory
 from src.node.address import Address
 from src.mesh.networkView import NetworkView
+from typing import Sequence
 import asyncio
 import zmq.asyncio
 import uuid
@@ -72,6 +73,12 @@ class Mesh():
         print("REFUTED NOT ALIVE REPORT")
         return None
 
+    def registerNode(self, nodeInfo: NodeInfo) -> None:
+        self.neighborManager.registerNode(nodeInfo)
+        return None
+
+    def getNodeInfos(self) -> Sequence[NodeInfo]:
+        return self.neighborManager.getNodeInfos()
 
 
 
