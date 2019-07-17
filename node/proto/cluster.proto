@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+message Shutdown {
+    string fromNode = 1;
+}
+
+message Join {
+
+}
+
+message Leave {
+    
+}

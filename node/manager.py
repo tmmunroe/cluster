@@ -1,20 +1,13 @@
-from src.node.address import Address
-from src.mesh.nodeInfo import NodeInfo
-from src.node.node import Node, NodeConfiguration
-from src.cluster.cluster import ClusterConfiguration
-from src.message.messageFactory import MessageFactory
-from src.message.messages_pb2 import Message, NodeInfoProto
-from src.service.service import ServiceManager
-from src.mesh.mesh import Mesh, MeshFactory
-import zmq
-from zmq.asyncio import Context
-from enum import Enum
-import time
-import uuid
-import random
+
+import zmq.asyncio
 import asyncio
 import concurrent.futures
 
+from src.mesh.nodeInfo import NodeInfo
+from src.node.node import Node
+from src.proto.messageFactory import MessageFactory
+from src.service.serviceManager import ServiceManagerAPI, ServiceSpecification, ServiceNotFound
+from src.mesh.mesh import Mesh, MeshFactory
 
 
 class ManagerNode(Node):
@@ -33,8 +26,6 @@ class ManagerNode(Node):
         except concurrent.futures.TimeoutError:
             print(f"Unable to connect... Starting cluster...")
             self.loop.create_task(self.handle_join_requests())
-            self.loop.create_task(self.handle_worker_responses())
-            self.loop.create_task(self.handle_client_requests())
         return None
 
 
@@ -42,7 +33,8 @@ class ManagerNode(Node):
         '''bind to cluster addr socket to handle joiners'''
         joinersAddr = f'tcp://*:{self.clusterJoinAddr.port}'
         print(f"Binding to {joinersAddr}...")
-        self.joiners = self.zmqContext.socket(zmq.ROUTER)
+        zmqContext = zmq.asyncio.Context.instance()
+        self.joiners = zmqContext.socket(zmq.ROUTER)
         self.joiners.bind(joinersAddr)
         while True:
             print("Listening for joiners")
@@ -64,32 +56,11 @@ class ManagerNode(Node):
         await self.joiners.send_multipart(multipart_msg)
         return None
 
-
-    async def handle_worker_responses(self):
-        '''bind to dealer address to send work to workers'''
-        print(f"Listening for Worker responses...")
-        workerAddr = f'tcp://*:{self.clusterWorkAddr.port}'
-        print(f"Binding to {workerAddr}...")
-        self.workers = self.zmqContext.socket(zmq.DEALER)
-        self.workers.bind(workerAddr)
-        while True:
-            print("Listening for worker responses")
-            data = await self.workers.recv_multipart()
-            await self.clients.send_multipart(data)
-
-
-    async def handle_client_requests(self):
-        '''bind to router address to handle client requests'''
-        clientAddr = f'tcp://*:{self.clusterClientAddr.port}'
-        print(f"Binding to {clientAddr}...")
-        self.clients = self.zmqContext.socket(zmq.ROUTER)
-        self.clients.bind(clientAddr)
-        while True:
-            print("Listening for client requests")
-            data = await self.clients.recv_multipart()
-            await self.workers.send_multipart(data)
-
-
+    def startServiceProxy(self, serviceName: str):
+        try:
+            self.serviceManager.launchServiceProxy(serviceName, self.loop)
+        except ServiceNotFound:
+            print(f"ServiceProxy could not be launched for {serviceName} because it has not been added")
 
 
 class ManagerNodeFactory():
@@ -97,13 +68,10 @@ class ManagerNodeFactory():
     @classmethod
     def newManager(self) -> ManagerNode:
         loop = asyncio.get_event_loop()
-        zmqContext = zmq.asyncio.Context.instance()
 
         mesh = MeshFactory.newMesh()
-        serviceManager = ServiceManager()
+        serviceManager = ServiceManagerAPI()
 
-
-        return ManagerNode( loop, 
-                            zmqContext,
+        return ManagerNode( loop,
                             mesh,
                             serviceManager )

@@ -1,5 +1,5 @@
-from src.node.address import Address
-from src.mesh.messages.messages_pb2 import NodeInfoProto
+from src.common.address import Address
+from src.proto.mesh_messages_pb2 import NodeInfoProto
 from enum import Enum
 
 class NodeHealth(Enum):
@@ -44,14 +44,14 @@ class NodeInfo():
         nodeInfoProto.incarnation = self.incarnation
         nodeInfoProto.health = self.health.value
         if self.addr:
-            self.addr.packProtoAddress(msg.senderInfo.addr)
+            self.addr.packProtoAddress(nodeInfoProto.addr)
         if self.gossip_addr:
-            self.gossip_addr.packProtoAddress(msg.senderInfo.gossip_addr)
+            self.gossip_addr.packProtoAddress(nodeInfoProto.gossip_addr)
         if self.swim_addr:
-            self.swim_addr.packProtoAddress(msg.senderInfo.swim_addr)
+            self.swim_addr.packProtoAddress(nodeInfoProto.swim_addr)
         return nodeInfoProto
     
-    def isSameNodeAs(self, other: object) -> bool:
+    def isSameNodeAs(self, other: NodeInfo) -> bool:
         return (self.name == other.name) and (self.addr == other.addr)
 
 

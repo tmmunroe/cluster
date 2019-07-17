@@ -1,4 +1,4 @@
-from src.node.address import Address
+from src.common.address import Address
 
 class ClusterConfiguration():
     def __init__(self):

@@ -1,19 +1,19 @@
 '''TODO:
     decide where refutation protocol should be implemented
 '''
-from src.node.address import Address
+from src.common.address import Address
 from src.node.nodeInfo import NodeInfo, NodeHealth
 from src.mesh.networkView import NetworkView
-from typing import Dict, Sequence, Callable
+from typing import Dict, Callable, List, Awaitable
 import abc
 import logging
 import asyncio
 
 '''Define delegate callable
 name, address, incarnation, health'''
-NodeHealthChangeDelegate = Callable[[NodeInfo], None]
-RefuteNotAliveDelegate = Callable[[], None]
-NewNodeDelegate = Callable[[NodeInfo], None]
+NodeHealthChangeDelegate = Callable[[NodeInfo], Awaitable]
+RefuteNotAliveDelegate = Callable[[], Awaitable]
+NewNodeDelegate = Callable[[NodeInfo], Awaitable]
 
 
 '''NeighborManager controls the local view of the network topology;
@@ -23,9 +23,9 @@ class NeighborManager():
     def __init__(self, networkView: NetworkView = NetworkView()):
         self.reportViewPeriod = 10
         self.networkView = networkView
-        self.nodeHealthChangeDelegates: Sequence[ NodeHealthChangeDelegate ] = []
-        self.refuteNotAliveDelegates: Sequence[ RefuteNotAliveDelegate ] = []
-        self.newNodeDelegates: Sequence[ NewNodeDelegate ] = []
+        self.nodeHealthChangeDelegates: List[ NodeHealthChangeDelegate ] = []
+        self.refuteNotAliveDelegates: List[ RefuteNotAliveDelegate ] = []
+        self.newNodeDelegates: List[ NewNodeDelegate ] = []
         self.logger = logging.Logger('NeighborManager')
 
     def addNodeHealthChangeDelegate(self, delegate: Callable):
@@ -81,10 +81,10 @@ class NeighborManager():
         node = self.networkView.get(name, None)
         return node
 
-    def getNodeAddresses(self) -> Sequence:
+    def getNodeAddresses(self) -> List:
         return [ node.addr for node in self.getNodeInfos() ]
 
-    def getNodeInfos(self) -> Sequence:
+    def getNodeInfos(self) -> List:
         return self.networkView.values()
 
     def setNodeHealth(self, name:str , health: NodeHealth, incarnation: int) -> None:

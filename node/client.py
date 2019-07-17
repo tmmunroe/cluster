@@ -1,4 +1,4 @@
-from src.node.address import Address
+from src.common.address import Address
 from src.node.nodeInfo import NodeInfo
 from src.node.node import Node, NodeConfiguration
 from src.cluster.cluster import ClusterConfiguration
@@ -18,10 +18,8 @@ import asyncio
 class ClientNode(Node):
     def __init__(self, 
             loop,
-            zmqContext,
             serviceManager: ServiceManager,
             config=NodeConfiguration() ):
-        self.zmqContext = zmq.Context()
         self.serviceManager = serviceManager
 
         self.connectionConfig = config.connectionConfig
@@ -35,7 +33,8 @@ class ClientNode(Node):
 
     def setup_direct_messaging_sock(self) -> None:
         '''bind to direct messaging port'''
-        self.zmqSocket = self.zmqContext.socket(zmq.ROUTER)
+        zmqContext = zmq.asyncio.Context.instance()
+        self.zmqSocket = zmqContext.socket(zmq.ROUTER)
         if self.info.addr.port is None:
             '''bind to random port and then set address port'''
             port_selected = self.zmqSocket.bind_to_random_port('tcp://*',
@@ -55,7 +54,8 @@ class ClientNode(Node):
     def start(self):
         clientAddr = f'tcp://{self.clusterClientAddr.host}:{self.clusterClientAddr.port}'
         print(f"Connecting to {clientAddr}")
-        clientSock = self.zmqContext.socket(zmq.REQ)
+        zmqContext = zmq.asyncio.Context.instance()
+        clientSock = zmqContext.socket(zmq.REQ)
         clientSock.connect(clientAddr)
 
         print(f"Starting to send messages...")
@@ -90,9 +90,6 @@ class ClientNodeFactory():
     @classmethod
     def newClient(self):
         loop = asyncio.get_event_loop()
-        zmqContext = zmq.asyncio.Context.instance()
         serviceManager = ServiceManager()
 
-        return ClientNode( loop, 
-                            zmqContext,
-                            serviceManager )
+        return ClientNode( loop, serviceManager )

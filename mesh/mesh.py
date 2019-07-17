@@ -2,8 +2,8 @@ from src.mesh.gossipManager import GossipManager
 from src.mesh.neighborManager import NeighborManager
 from src.mesh.swimManager import SwimManager
 from src.mesh.nodeInfo import NodeInfo
-from src.message.messageFactory import MessageFactory
-from src.node.address import Address
+from src.proto.messageFactory import MessageFactory
+from src.common.address import Address
 from src.mesh.networkView import NetworkView
 from typing import Sequence
 import asyncio
@@ -115,7 +115,7 @@ class MeshFactory():
             max_retries= meshConnectionConfig.max_connect_retries )
         swim_addr = Address("localhost", swim_port)
 
-        gossip_queue = asyncio.Queue(loop=loop)
+        gossip_queue: asyncio.Queue = asyncio.Queue(loop=loop)
 
         node_name = 'Node_' + str(uuid.uuid4())
         nodeInfo = NodeInfo(addr=addr, 

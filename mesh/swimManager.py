@@ -1,8 +1,9 @@
 from src.mesh.neighborManager import NeighborManager
 from src.mesh.nodeInfo import NodeInfo, NodeHealth
-from src.mesh.messages.MessageFactory import MeshMessageFactory
-from src.mesh.messages.messages_pb2 import Ping, PingReq, Ack
-from src.node.address import Address
+from src.mesh.messageFactory import MeshMessageFactory
+from src.proto.mesh_messages_pb2 import Ping, PingReq, Ack
+from src.common.address import Address
+from typing import Dict
 import zmq
 import random
 import asyncio
@@ -40,7 +41,7 @@ class SwimManager():
         self.zmqContext = zmqContext
         self.config = swimConfig
         self.connectionConfig = swimConfig.swim_connection_config
-        self.degradedNodeTimers = {}
+        self.degradedNodeTimers: Dict[str, asyncio.TimerHandle] = {}
 
         '''add onNodeHealthChange listener to neighbor manager'''
         self.neighborManager.nodeHealthChangeDelegates.append(self.onNodeHealthChange)
@@ -129,19 +130,26 @@ class SwimManager():
             print("Ping request timed out")
             return None
 
-        msg = MeshMessageFactory.newFromString(receivedData)
-        senderInfo = NodeInfo.fromProto(msg.senderInfo)
+        ackMsg = MeshMessageFactory.newFromString(receivedData)
+
+        '''unpack ack target info'''
+        senderInfo = self.neighborManager.getNodeInfo(ackMsg.targetName)
+        senderAddr = Address.fromProtoAddress(ackMsg.targetAddress)
+        if targetNode.swim_addr != senderAddr:
+            print(f"ERROR: For {targetNode.name}, have target address {targetNode.swim_addr} but received target address {senderAddr}")
+
         if not senderInfo.isSameNodeAs(targetNode):
             print(f"ERROR: Unexpected Node Info received:")
             print(f"{senderInfo.name} @ {senderInfo.swim_addr}")
             print(f"{targetNode.name} @ {targetNode.swim_addr}")
-        if msg.message.Is(Ack.DESCRIPTOR):
+        if ackMsg.message.Is(Ack.DESCRIPTOR):
             #print(f"RECEIVED PING ACK")
             return senderInfo
         else:
             print(f"ERROR: Unknown message type received")
             return None
-    
+
+
     async def ping_req(self, targetNode: NodeInfo, bridgeNode: NodeInfo) -> NodeInfo:
         pingReqMsg = MeshMessageFactory.newPingRequestMessage( self.localNode, targetNode.name, targetNode.swim_addr )
         try:
@@ -153,7 +161,12 @@ class SwimManager():
             return None
 
         msg = MeshMessageFactory.newFromString(receivedData)
-        senderInfo = NodeInfo.fromProto(msg.senderInfo)
+
+        '''unpack ack target info'''
+        senderInfo = self.neighborManager.getNodeInfo(msg.targetName)
+        senderAddr = Address.fromProtoAddress(msg.targetAddress)
+        if targetNode.swim_addr != senderAddr:
+            print(f"ERROR: For {targetNode.name}, have target address {targetNode.swim_addr} but received target address {senderAddr}")
 
         if not senderInfo.isSameNodeAs(targetNode):
             print(f"ERROR: Unexpected Node Info received:")
@@ -224,17 +237,15 @@ class SwimManager():
         return None
 
 
-    async def handle_ping(self, zmqAddress, empty, msg: Message) -> None:
+    async def handle_ping(self, zmqAddress, empty, pingMsg: Ping) -> None:
         ackMsg = MeshMessageFactory.newAckMessage(self.localNode)
         multipart = [ zmqAddress, empty, ackMsg.SerializeToString() ]
         await self.swim_sock.send_multipart(multipart)
         return None
 
 
-    async def handle_ping_req(self, zmqAddress, empty, msg: Message) -> None:
+    async def handle_ping_req(self, zmqAddress, empty, pingReqMsg: PingReq) -> None:
         '''unpack ping request target info'''
-        pingReqMsg = PingReq()
-        msg.message.Unpack(pingReqMsg)
         targetNode = self.neighborManager.getNodeInfo(pingReqMsg.targetName)
         targetAddr = Address.fromProtoAddress(pingReqMsg.targetAddress)
         if targetNode.swim_addr != targetAddr:

@@ -1,8 +1,9 @@
 from src.node.neighborManager import NeighborManager
 from src.node.nodeInfo import NodeInfo, NodeHealth
-from src.mesh.messages.messages_pb2 import Message, Gossip, NodeInfoProto
-from src.mesh.messages.messageFactory import MessageFactory
-from src.node.address import Address
+from src.proto.mesh_messages_pb2 import Gossip, NodeInfoProto
+from src.proto.messageFactory import MessageFactory
+from src.common.address import Address
+from typing import Dict
 import zmq
 import queue
 import random
@@ -41,7 +42,7 @@ class GossipManager():
         self.zmqContext = zmqContext
         self.config = gossipConfig
         self.connectionConfig = gossipConfig.connectionConfig
-        self.alreadyGossiping = {}
+        self.alreadyGossiping: Dict[str,float] = {}
 
 
     def consume_gossip(self, gossip: Gossip) -> bool:
@@ -69,7 +70,7 @@ class GossipManager():
 
 
     def flushAlreadyGossiping(self):
-        print("FLUSHING ALREADYGOSSIPING")
+        print("FLUSHING ALREADY GOSSIPING")
         receivedAtLimit = time.time() - self.config.alreadyGossipingRetention
         for key, receivedAt in self.alreadyGossiping.items():
             if receivedAt < receivedAtLimit:
@@ -78,18 +79,18 @@ class GossipManager():
 
     async def handle_gossip(self, data: str) -> None:
         '''decode msg'''
-        msg = MessageFactory.newFromString(data)
-
+        gossip = MessageFactory.newFromString(data)
+        if not gossip.Is(Gossip.DESCRIPTOR):
+            print("ERROR: Received unexpected message on Gossip stream")
+            return None
+    
         '''unpack gossip'''
-        gossip = Gossip()
-        msg.message.Unpack(gossip)
         should_gossip = self.consume_gossip(gossip)
 
         '''if any remaining sends, then put gossip on queue'''
         if gossip.remainingSends > 0 and should_gossip:
             gossip.remainingSends = gossip.remainingSends - 1
-            msg.message.Pack(gossip)
-            await self.gossip_queue.put(msg.SerializeToString())
+            await self.gossip_queue.put(gossip.SerializeToString())
 
 
     async def gossip_to(self, recipient:NodeInfo, data:str) -> None:

@@ -1,6 +1,6 @@
-from src.node.address import Address
+from src.common.address import Address
 from src.node.nodeInfo import NodeInfo, NodeHealth
-import src.message.messages_pb2 as messages_pb2
+import src.mesh.messages_pb2 as messages_pb2
 from typing import Dict, Sequence, Callable
 import collections
 import abc
@@ -13,7 +13,7 @@ class NetworkView(collections.abc.MutableMapping):
     def fromProto(self, networkViewProto: messages_pb2.NetworkView):
         networkView = NetworkView()
         networkView.neighbors = { nodeInfoP.name: NodeInfo.fromProto(nodeInfoP) 
-            for nodeInfoP in networkViewProto.nodeInfos }
+            for nodeInfoP in networkViewProto.nodes }
         return networkView
     
     def __init__(self):
