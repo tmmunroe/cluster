@@ -12,7 +12,7 @@ class ServiceNotFound(Exception):
     pass
 
 class ServiceManagerAPI(meta=abc.ABCMeta):
-
+    '''Manages Service instances and proxies'''
     def __init__(self):
         self.services: Dict[str, ServiceAPI] = {}
         self.launchedServices: DefaultDict[str, List[Task]] = defaultdict(list)
@@ -31,7 +31,8 @@ class ServiceManagerAPI(meta=abc.ABCMeta):
 
 
     def removeService(self, serviceName: str) -> None:
-        self.stopServiceActivity(serviceName)
+        self.stopServing(serviceName)
+        self.stopProxy(serviceName)
         service = self.services.pop(serviceName, None)
         return None
 
@@ -51,12 +52,14 @@ class ServiceManagerAPI(meta=abc.ABCMeta):
         if not serviceInstance:
             raise ServiceNotFound(f"Service {serviceName} has not been added yet")
         
+        '''TODO: we might want to launch this in a separate process instead
+            of as part of the event loop'''
         launchedTask = loop.create_task(serviceInstance.serve())
         self.launchedServices[serviceName].append(launchedTask)
         return None
 
  
-    def stopServiceActivity(self, serviceName: str) -> None:
+    def stopServing(self, serviceName: str) -> None:
         launchedTasks = self.launchedServices[serviceName]
         while len(launchedTasks) != 0:
             task = launchedTasks.pop()
@@ -78,3 +81,9 @@ class ServiceManagerAPI(meta=abc.ABCMeta):
 
         self.serviceProxies[serviceName] = proxy
         
+     
+    def stopProxy(self, serviceName: str) -> None:
+        proxy = self.serviceProxies[serviceName]
+        if proxy is not None:
+            proxy.stop()
+        return None

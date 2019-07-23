@@ -33,9 +33,11 @@ class ServiceAPI(meta=abc.ABCMeta):
     def __init__(self, specification: ServiceSpecification):
         self.specification = specification
 
+
     @property
     def name(self):
         return self.specification.name
+
 
     @classmethod
     def register(cls, serviceName:str, reqMsg:Callable, respMsg:Callable):
@@ -84,6 +86,7 @@ class ServiceAPI(meta=abc.ABCMeta):
 
         '''return serialized response message'''
         return rMsg.SerializeToString()
+
 
     async def serve(self) -> None:
         '''connect to the service proxy'''

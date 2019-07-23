@@ -7,7 +7,7 @@ from src.service.serviceProxy import ServiceProxyConfig
 
 mathServiceProxyConfig = ServiceProxyConfig("MathService", 
     frontendAddr = Address(host="*", port=9091),
-    backendAddr = Address(host="*", port=9092))
+    backendAddr = Address(host="*", port=9093))
 
 mathServiceSpecification = ServiceSpecification(
     name="MathService",
