@@ -58,7 +58,7 @@ class Node():
         respMsg = MessageFactory.newFromString(data)
         joinAccept = JoinAccept()
         respMsg.message.Unpack(joinAccept)
-        self.mesh.neighborManager.updateWithNetworkViewMessage( NetworkView.fromProto(joinAccept.networkView) )
+        self.mesh.neighborManager.updateWithNetworkView( NetworkView.fromProto(joinAccept.networkView) )
         return respMsg
 
 

@@ -59,8 +59,8 @@ class MeshMessageFactory():
         return pingMsg
 
     @classmethod
-    def newAckMessage(self, nodeInfo: NodeInfo) -> Ack:
+    def newAckMessage(self, nodeInfo: NodeInfo, targetName: str, targetAddress: Address) -> Ack:
         ackMsg = Ack()
-        ackMsg.targetName = nodeInfo.targetName
-        nodeInfo.targetAddress.packProtoAddress(ackMsg.targetAddress)
+        ackMsg.targetName = targetName
+        targetAddress.packProtoAddress(ackMsg.targetAddress)
         return ackMsg

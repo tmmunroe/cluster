@@ -2,9 +2,9 @@
     decide where refutation protocol should be implemented
 '''
 from src.common.address import Address
-from src.node.nodeInfo import NodeInfo, NodeHealth
+from src.mesh.nodeInfo import NodeInfo, NodeHealth
 from src.mesh.networkView import NetworkView
-from typing import Dict, Callable, List, Awaitable
+from typing import Dict, Callable, List, Awaitable, ValuesView
 import abc
 import logging
 import asyncio
@@ -84,7 +84,7 @@ class NeighborManager():
     def getNodeAddresses(self) -> List:
         return [ node.addr for node in self.getNodeInfos() ]
 
-    def getNodeInfos(self) -> List:
+    def getNodeInfos(self) -> ValuesView:
         return self.networkView.values()
 
     def setNodeHealth(self, name:str , health: NodeHealth, incarnation: int) -> None:

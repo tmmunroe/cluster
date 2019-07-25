@@ -5,7 +5,7 @@ from src.mesh.nodeInfo import NodeInfo
 from src.proto.messageFactory import MessageFactory
 from src.common.address import Address
 from src.mesh.networkView import NetworkView
-from typing import Sequence
+from typing import Sequence, ValuesView
 import asyncio
 import zmq.asyncio
 import uuid
@@ -77,7 +77,7 @@ class Mesh():
         self.neighborManager.registerNode(nodeInfo)
         return None
 
-    def getNodeInfos(self) -> Sequence[NodeInfo]:
+    def getNodeInfos(self) -> ValuesView:
         return self.neighborManager.getNodeInfos()
 
 

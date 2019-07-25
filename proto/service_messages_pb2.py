@@ -14,7 +14,6 @@ _sym_db = _symbol_database.Default()
 
 
 from google.protobuf import any_pb2 as google_dot_protobuf_dot_any__pb2
-import common_messages_pb2 as common__messages__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -22,9 +21,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x16service_messages.proto\x1a\x19google/protobuf/any.proto\x1a\x15\x63ommon_messages.proto\"`\n\x0eServiceRequest\x12\x12\n\nrequest_id\x18\x01 \x01(\x05\x12\x13\n\x0bserviceName\x18\x03 \x01(\t\x12%\n\x07message\x18\x04 \x01(\x0b\x32\x14.google.protobuf.Any\"a\n\x0fServiceResponse\x12\x12\n\nrequest_id\x18\x01 \x01(\x05\x12\x13\n\x0bserviceName\x18\x03 \x01(\t\x12%\n\x07message\x18\x04 \x01(\x0b\x32\x14.google.protobuf.Any\"(\n\nAddRequest\x12\x0c\n\x04numA\x18\x01 \x01(\x05\x12\x0c\n\x04numB\x18\x02 \x01(\x05\"\x1d\n\x0b\x41\x64\x64Response\x12\x0e\n\x06result\x18\x01 \x01(\x05\"\x1f\n\x0cSimpleString\x12\x0f\n\x07\x61String\x18\x01 \x01(\tb\x06proto3')
+  serialized_pb=_b('\n\x16service_messages.proto\x1a\x19google/protobuf/any.proto\"`\n\x0eServiceRequest\x12\x12\n\nrequest_id\x18\x01 \x01(\x05\x12\x13\n\x0bserviceName\x18\x03 \x01(\t\x12%\n\x07message\x18\x04 \x01(\x0b\x32\x14.google.protobuf.Any\"a\n\x0fServiceResponse\x12\x12\n\nrequest_id\x18\x01 \x01(\x05\x12\x13\n\x0bserviceName\x18\x03 \x01(\t\x12%\n\x07message\x18\x04 \x01(\x0b\x32\x14.google.protobuf.Any\"(\n\nAddRequest\x12\x0c\n\x04numA\x18\x01 \x01(\x05\x12\x0c\n\x04numB\x18\x02 \x01(\x05\"\x1d\n\x0b\x41\x64\x64Response\x12\x0e\n\x06result\x18\x01 \x01(\x05\"\x1f\n\x0cSimpleString\x12\x0f\n\x07\x61String\x18\x01 \x01(\tb\x06proto3')
   ,
-  dependencies=[google_dot_protobuf_dot_any__pb2.DESCRIPTOR,common__messages__pb2.DESCRIPTOR,])
+  dependencies=[google_dot_protobuf_dot_any__pb2.DESCRIPTOR,])
 
 
 
@@ -69,8 +68,8 @@ _SERVICEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=76,
-  serialized_end=172,
+  serialized_start=53,
+  serialized_end=149,
 )
 
 
@@ -114,8 +113,8 @@ _SERVICERESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=174,
-  serialized_end=271,
+  serialized_start=151,
+  serialized_end=248,
 )
 
 
@@ -152,8 +151,8 @@ _ADDREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=273,
-  serialized_end=313,
+  serialized_start=250,
+  serialized_end=290,
 )
 
 
@@ -183,8 +182,8 @@ _ADDRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=315,
-  serialized_end=344,
+  serialized_start=292,
+  serialized_end=321,
 )
 
 
@@ -214,8 +213,8 @@ _SIMPLESTRING = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=346,
-  serialized_end=377,
+  serialized_start=323,
+  serialized_end=354,
 )
 
 _SERVICEREQUEST.fields_by_name['message'].message_type = google_dot_protobuf_dot_any__pb2._ANY

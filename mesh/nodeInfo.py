@@ -7,9 +7,10 @@ class NodeHealth(Enum):
     SUSPECT = NodeInfoProto.NodeHealth.SUSPECT
     ALIVE = NodeInfoProto.NodeHealth.ALIVE
 
-
 '''NodeInfo describes the state of a node as seen by the NeighborManager'''
 class NodeInfo():
+
+    ''
     def __init__(self, 
             addr:Address, 
             name:str, 

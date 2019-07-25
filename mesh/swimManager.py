@@ -3,7 +3,7 @@ from src.mesh.nodeInfo import NodeInfo, NodeHealth
 from src.mesh.messageFactory import MeshMessageFactory
 from src.proto.mesh_messages_pb2 import Ping, PingReq, Ack
 from src.common.address import Address
-from typing import Dict
+from typing import Dict, Optional
 import zmq
 import random
 import asyncio
@@ -111,7 +111,7 @@ class SwimManager():
         return None
 
 
-    async def sendReceive(self, targetNode: NodeInfo, data:str) -> str:
+    async def sendReceive(self, targetNode: NodeInfo, data:bytes) -> bytes:
         targetNodeAddr = f"tcp://{targetNode.swim_addr}"
         conn = self.zmqContext.socket(zmq.REQ)
         conn.connect(targetNodeAddr)
@@ -120,7 +120,7 @@ class SwimManager():
         return received
 
 
-    async def ping(self, targetNode: NodeInfo) -> NodeInfo:
+    async def ping(self, targetNode: NodeInfo) -> Optional[NodeInfo]:
         pingMsg = MeshMessageFactory.newPingMessage( self.localNode, targetNode.name, targetNode.swim_addr )
         try:
             sendReceiveTask = self.loop.create_task(self.sendReceive(targetNode, pingMsg.SerializeToString()))
@@ -150,7 +150,7 @@ class SwimManager():
             return None
 
 
-    async def ping_req(self, targetNode: NodeInfo, bridgeNode: NodeInfo) -> NodeInfo:
+    async def ping_req(self, targetNode: NodeInfo, bridgeNode: NodeInfo) -> Optional[NodeInfo]:
         pingReqMsg = MeshMessageFactory.newPingRequestMessage( self.localNode, targetNode.name, targetNode.swim_addr )
         try:
             sendReceiveTask = self.loop.create_task(self.sendReceive(bridgeNode, pingReqMsg.SerializeToString()))
@@ -238,7 +238,8 @@ class SwimManager():
 
 
     async def handle_ping(self, zmqAddress, empty, pingMsg: Ping) -> None:
-        ackMsg = MeshMessageFactory.newAckMessage(self.localNode)
+        ackMsg = MeshMessageFactory.newAckMessage(self.localNode, self.localNode.name, 
+            self.localNode.swim_addr)
         multipart = [ zmqAddress, empty, ackMsg.SerializeToString() ]
         await self.swim_sock.send_multipart(multipart)
         return None
@@ -260,7 +261,8 @@ class SwimManager():
                 receivedNodeInfo.health, 
                 receivedNodeInfo.incarnation)
             
-            ackMsg = MeshMessageFactory.newAckMessage(receivedNodeInfo)
+            ackMsg = MeshMessageFactory.newAckMessage(receivedNodeInfo, 
+                receivedNodeInfo.name, receivedNodeInfo.swim_addr)
             multipart = [ zmqAddress, empty, ackMsg.SerializeToString() ]
             await self.swim_sock.send_multipart(multipart)
         else:

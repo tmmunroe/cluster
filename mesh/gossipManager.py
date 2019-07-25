@@ -1,5 +1,5 @@
-from src.node.neighborManager import NeighborManager
-from src.node.nodeInfo import NodeInfo, NodeHealth
+from src.mesh.neighborManager import NeighborManager
+from src.mesh.nodeInfo import NodeInfo, NodeHealth
 from src.proto.mesh_messages_pb2 import Gossip, NodeInfoProto
 from src.proto.messageFactory import MessageFactory
 from src.common.address import Address
@@ -103,6 +103,9 @@ class GossipManager():
         print(f"SENT GOSSIP TO {recipient.name} : {recipient.gossip_addr}!!!!")
 
 
+    def setLocalNodeInfo(self, nodeInfo: NodeInfo) -> None:
+        self.localNode = nodeInfo
+        return None
 
     async def listen_for_gossip_loop(self) -> None:
         '''bind to pull socket, record gossip address, and then loop forever.. '''

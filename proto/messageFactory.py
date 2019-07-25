@@ -53,32 +53,6 @@ class MessageFactory():
         gossip.originNode.health = nodeInfo.health.value
         return wrapper, gossip
 
-    @classmethod
-    def newPingMessage(self, nodeInfo: NodeInfo, targetInfo: NodeInfo) -> Message:
-        wrapper = self.newMessage(nodeInfo)
-        pingMsg = Ping()
-        pingMsg.targetInfo.name = targetInfo.name
-        pingMsg.targetInfo.host = targetInfo.addr.host
-        pingMsg.targetInfo.port = targetInfo.addr.port
-        wrapper.message.Pack(pingMsg)
-        return wrapper
-
-    @classmethod
-    def newPingRequestMessage(self, nodeInfo: NodeInfo, targetInfo: NodeInfo) -> Message:
-        wrapper = self.newMessage(nodeInfo)
-        pingMsg = PingReq()
-        pingMsg.targetInfo.name = targetInfo.name
-        pingMsg.targetInfo.host = targetInfo.addr.host
-        pingMsg.targetInfo.port = targetInfo.addr.port
-        wrapper.message.Pack(pingMsg)
-        return wrapper
-
-    @classmethod
-    def newAckMessage(self, nodeInfo: NodeInfo) -> Message:
-        wrapper = self.newMessage(nodeInfo)
-        ackMsg = Ack()
-        wrapper.message.Pack(ackMsg)
-        return wrapper
 
     @classmethod
     def newJoinRequestMessage(self, nodeInfo: NodeInfo) -> Message:
