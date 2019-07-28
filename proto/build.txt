@@ -1,1 +1,0 @@
-protoc -I=/Users/Turner/Envs/clusterGit/src/proto/ --python_out /Users/Turner/Envs/clusterGit/src/proto/ --mypy_out /Users/Turner/Envs/clusterGit/src/proto/ common_messages.proto mesh_messages.proto service_messages.proto
