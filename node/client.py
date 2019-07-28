@@ -2,8 +2,8 @@ from src.common.address import Address
 from src.node.nodeInfo import NodeInfo
 from src.node.node import Node, NodeConfiguration
 from src.cluster.cluster import ClusterConfiguration
-from src.message.messageFactory import MessageFactory
-from src.message.messages_pb2 import Message, NodeInfoProto
+from proto.factory.messageFactory import MessageFactory
+from proto.build.mesh_messages_pb2 import NodeInfoProto
 from src.node.neighborManager import NeighborManager
 from src.service.service import ServiceManager
 import zmq

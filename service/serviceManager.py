@@ -11,7 +11,7 @@ import asyncio
 class ServiceNotFound(Exception):
     pass
 
-class ServiceManagerAPI(meta=abc.ABCMeta):
+class ServiceManagerAPI():
     '''Manages Service instances and proxies'''
     def __init__(self):
         self.services: Dict[str, ServiceAPI] = {}

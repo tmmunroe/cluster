@@ -6,8 +6,9 @@ from src.common.address import Address
 from src.mesh.mesh import Mesh
 from src.mesh.networkView import NetworkView
 from src.cluster.cluster import ClusterConfiguration
-from src.message.messageFactory import MessageFactory
-from src.message.messages_pb2 import Message, NodeInfoProto, JoinAccept
+from src.node.messageFactory import ClusterMessageFactory
+from proto.build.mesh_messages_pb2 import NodeInfoProto
+from proto.build.cluster_messages_pb2 import JoinAccept
 from src.service.serviceManager import ServiceManagerAPI, ServiceNotFound
 from src.service.serviceAPI import ServiceAPI, ServiceSpecification
 
@@ -47,15 +48,15 @@ class Node():
         self.clusterClientAddr = config.clusterConfig.clientAddr
 
 
-    async def join(self, cluster: Address) -> Message:
-        joinMsg = MessageFactory.newJoinRequestMessage(self.mesh.localNode).SerializeToString()
+    async def join(self, cluster: Address) -> JoinAccept:
+        joinMsg = ClusterMessageFactory.newJoinRequestMessage(self.mesh.localNode).SerializeToString()
         zmqContext = zmq.asyncio.Context.instance()
         joinSocket = zmqContext.socket(zmq.REQ)
         joinSocket.connect(f'tcp://{self.clusterJoinAddr}')
 
         await joinSocket.send(joinMsg)
         data = await joinSocket.recv()
-        respMsg = MessageFactory.newFromString(data)
+        respMsg = ClusterMessageFactory.newFromString(data)
         joinAccept = JoinAccept()
         respMsg.message.Unpack(joinAccept)
         self.mesh.neighborManager.updateWithNetworkView( NetworkView.fromProto(joinAccept.networkView) )

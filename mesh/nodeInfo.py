@@ -1,5 +1,5 @@
 from src.common.address import Address
-from src.proto.mesh_messages_pb2 import NodeInfoProto
+from proto.build.mesh_messages_pb2 import NodeInfoProto
 from enum import Enum
 
 class NodeHealth(Enum):
@@ -52,7 +52,7 @@ class NodeInfo():
             self.swim_addr.packProtoAddress(nodeInfoProto.swim_addr)
         return nodeInfoProto
     
-    def isSameNodeAs(self, other: NodeInfo) -> bool:
+    def isSameNodeAs(self, other) -> bool:
         return (self.name == other.name) and (self.addr == other.addr)
 
 

@@ -1,7 +1,7 @@
 from src.mesh.neighborManager import NeighborManager
 from src.mesh.nodeInfo import NodeInfo, NodeHealth
-from src.proto.mesh_messages_pb2 import Gossip, NodeInfoProto
-from src.proto.messageFactory import MessageFactory
+from proto.build.mesh_messages_pb2 import Gossip, NodeInfoProto
+from src.mesh.messageFactory import MeshMessageFactory
 from src.common.address import Address
 from typing import Dict
 import zmq
@@ -79,7 +79,7 @@ class GossipManager():
 
     async def handle_gossip(self, data: str) -> None:
         '''decode msg'''
-        gossip = MessageFactory.newFromString(data)
+        gossip = MeshMessageFactory.newFromString(data)
         if not gossip.Is(Gossip.DESCRIPTOR):
             print("ERROR: Received unexpected message on Gossip stream")
             return None

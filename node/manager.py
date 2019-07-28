@@ -5,7 +5,7 @@ import concurrent.futures
 
 from src.mesh.nodeInfo import NodeInfo
 from src.node.node import Node
-from src.proto.messageFactory import MessageFactory
+from src.node.messageFactory import ClusterMessageFactory
 from src.service.serviceManager import ServiceManagerAPI, ServiceSpecification, ServiceNotFound
 from src.mesh.mesh import Mesh, MeshFactory
 
@@ -46,12 +46,12 @@ class ManagerNode(Node):
     async def handle_new_joiner(self, data) -> None:
         routing_addr, empty, msg = data
 
-        msg = MessageFactory.newFromString(msg)
+        msg = ClusterMessageFactory.newFromString(msg)
         nodeInfo = NodeInfo.fromProto(msg.senderInfo)
         self.mesh.registerNode(nodeInfo)
 
         '''create full response message, serialize, and send'''
-        joinAcceptMessage = MessageFactory.newJoinAcceptMessage(self.mesh.localNode, self.mesh.getNodeInfos())
+        joinAcceptMessage = ClusterMessageFactory.newJoinAcceptMessage(self.mesh.localNode, self.mesh.getNodeInfos())
         multipart_msg = [routing_addr, empty, joinAcceptMessage.SerializeToString()]
         await self.joiners.send_multipart(multipart_msg)
         return None

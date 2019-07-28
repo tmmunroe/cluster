@@ -1,4 +1,4 @@
-from src.proto.mesh_messages_pb2 import Ping, PingReq, Ack, NodeInfoProto, NetworkView, Gossip
+from proto.build.mesh_messages_pb2 import Ping, PingReq, Ack, NodeInfoProto, NetworkView, Gossip
 from src.common.address import Address
 from src.mesh.nodeInfo import NodeInfo
 from uuid import uuid4

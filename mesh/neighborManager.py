@@ -159,3 +159,5 @@ class NeighborManager():
     def start(self, loop: asyncio.BaseEventLoop) -> None:
         self.loop = loop
         self.loop.create_task(self.report_state_loop())
+        print(f"NeighborManager started")
+        return None

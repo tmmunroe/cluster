@@ -1,6 +1,6 @@
 from src.common.address import Address
 from src.mesh.nodeInfo import NodeInfo, NodeHealth
-import src.mesh.messages_pb2 as messages_pb2
+import proto.build.mesh_messages_pb2 as messages_pb2
 from typing import Dict, Sequence, Callable
 import collections
 import abc

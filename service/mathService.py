@@ -1,6 +1,6 @@
 import abc
 from src.common.address import Address
-from proto.service_messages_pb2 import AddRequest,AddResponse
+from proto.build.service_messages_pb2 import AddRequest,AddResponse
 from src.service.serviceAPI import ServiceAPI, ServiceSpecification
 from src.service.serviceProxy import ServiceProxyConfig
 

@@ -1,7 +1,7 @@
 from src.mesh.neighborManager import NeighborManager
 from src.mesh.nodeInfo import NodeInfo, NodeHealth
 from src.mesh.messageFactory import MeshMessageFactory
-from src.proto.mesh_messages_pb2 import Ping, PingReq, Ack
+from proto.build.mesh_messages_pb2 import Ping, PingReq, Ack
 from src.common.address import Address
 from typing import Dict, Optional
 import zmq
@@ -291,10 +291,12 @@ class SwimManager():
         return None
 
 
-    async def start(self, loop: asyncio.BaseEventLoop) -> None:
+    def start(self, loop: asyncio.BaseEventLoop) -> None:
         self.loop = loop
         self.loop.create_task(self.handle_direct_message_loop())
         self.loop.create_task(self.health_check_loop())
+        print(f"SwimManager started")
+        return None
 
 
         

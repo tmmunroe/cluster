@@ -2,7 +2,7 @@ from src.mesh.gossipManager import GossipManager
 from src.mesh.neighborManager import NeighborManager
 from src.mesh.swimManager import SwimManager
 from src.mesh.nodeInfo import NodeInfo
-from src.proto.messageFactory import MessageFactory
+from src.mesh.messageFactory import MeshMessageFactory
 from src.common.address import Address
 from src.mesh.networkView import NetworkView
 from typing import Sequence, ValuesView
@@ -40,13 +40,14 @@ class Mesh():
         self.neighborManager.start(self.loop)
         self.gossipManager.start(self.loop)
         self.swimManager.start(self.loop)
+        print(f"Mesh started... Running loop")
         self.loop.run_forever()
 
     def updateWithNetworkView(self, networkView: NetworkView):
         self.neighborManager.updateWithNetworkView(networkView)
 
     async def gossipNewNode(self, nodeInfo: NodeInfo) -> None:
-        msg, gossipMsg = MessageFactory.newGossipMessage(self.localNode)
+        msg, gossipMsg = MeshMessageFactory.newGossipMessage(self.localNode)
         nodeInfoProto = nodeInfo.toProto()
         gossipMsg.message.Pack(nodeInfoProto)
         msg.message.Pack(gossipMsg)
@@ -55,7 +56,7 @@ class Mesh():
 
     async def gossipNodeHealthChange(self, nodeInfo: NodeInfo) -> None:
         print(f"GOSSIPING ABOUT NODE HEALTH CHANGE: {nodeInfo.name} : {nodeInfo.addr} {nodeInfo.health.name}")
-        msg, gossipMsg = MessageFactory.newGossipMessage(self.localNode)
+        msg, gossipMsg = MeshMessageFactory.newGossipMessage(self.localNode)
         nodeInfoProto = nodeInfo.toProto()
         gossipMsg.message.Pack(nodeInfoProto)
         msg.message.Pack(gossipMsg)
@@ -65,7 +66,7 @@ class Mesh():
 
     async def refuteNotAlive(self) -> None:
         self.localNode.nextIncarnation()
-        msg, gossipMsg = MessageFactory.newGossipMessage(self.localNode)
+        msg, gossipMsg = MeshMessageFactory.newGossipMessage(self.localNode)
         nodeInfoProto = self.localNode.toProto()
         gossipMsg.message.Pack(nodeInfoProto)
         msg.message.Pack(gossipMsg)
@@ -94,7 +95,7 @@ class MeshFactory():
             "tcp://*",
             min_port = meshConnectionConfig.min_port,
             max_port = meshConnectionConfig.max_port,
-            max_retries= meshConnectionConfig.max_connect_retries )
+            max_tries= meshConnectionConfig.max_connect_retries )
         addr = Address("localhost", bound_port)
 
 
@@ -103,7 +104,7 @@ class MeshFactory():
             "tcp://*",
             min_port = meshConnectionConfig.min_port,
             max_port = meshConnectionConfig.max_port,
-            max_retries= meshConnectionConfig.max_connect_retries )
+            max_tries= meshConnectionConfig.max_connect_retries )
         gossip_addr = Address("localhost", gossip_port)
 
 
@@ -112,7 +113,7 @@ class MeshFactory():
             "tcp://*",
             min_port = meshConnectionConfig.min_port,
             max_port = meshConnectionConfig.max_port,
-            max_retries= meshConnectionConfig.max_connect_retries )
+            max_tries= meshConnectionConfig.max_connect_retries )
         swim_addr = Address("localhost", swim_port)
 
         gossip_queue: asyncio.Queue = asyncio.Queue(loop=loop)
