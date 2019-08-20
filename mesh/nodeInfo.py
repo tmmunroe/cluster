@@ -1,5 +1,5 @@
 from src.common.address import Address
-from proto.build.mesh_messages_pb2 import NodeInfoProto
+from proto.mesh_messages_pb2 import NodeInfoProto
 from enum import Enum
 
 class NodeHealth(Enum):
@@ -29,8 +29,8 @@ class NodeInfo():
     @classmethod
     def fromProto(self, nodeInfoProto: NodeInfoProto):
         addr = Address(nodeInfoProto.addr.host, nodeInfoProto.addr.port)
-        gossip_addr = Address(nodeInfoProto.gossip_addr.gossipHost, nodeInfoProto.gossip_addr.gossipPort)
-        swim_addr = Address(nodeInfoProto.swim_addr.swimHost, nodeInfoProto.swim_addr.swimPort)
+        gossip_addr = Address(nodeInfoProto.gossip_addr.host, nodeInfoProto.gossip_addr.port)
+        swim_addr = Address(nodeInfoProto.swim_addr.host, nodeInfoProto.swim_addr.port)
         health_dec = NodeHealth(nodeInfoProto.health)
         return NodeInfo(addr,
             nodeInfoProto.name, 

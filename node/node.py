@@ -7,8 +7,8 @@ from src.mesh.mesh import Mesh
 from src.mesh.networkView import NetworkView
 from src.cluster.cluster import ClusterConfiguration
 from src.node.messageFactory import ClusterMessageFactory
-from proto.build.mesh_messages_pb2 import NodeInfoProto
-from proto.build.cluster_messages_pb2 import JoinAccept
+from proto.mesh_messages_pb2 import NodeInfoProto
+from proto.cluster_messages_pb2 import JoinAccept
 from src.service.serviceManager import ServiceManagerAPI, ServiceNotFound
 from src.service.serviceAPI import ServiceAPI, ServiceSpecification
 
@@ -49,18 +49,20 @@ class Node():
 
 
     async def join(self, cluster: Address) -> JoinAccept:
-        joinMsg = ClusterMessageFactory.newJoinRequestMessage(self.mesh.localNode).SerializeToString()
+        joinMsg = ClusterMessageFactory.newJoinMessage(self.mesh.localNode)
+
         zmqContext = zmq.asyncio.Context.instance()
         joinSocket = zmqContext.socket(zmq.REQ)
         joinSocket.connect(f'tcp://{self.clusterJoinAddr}')
 
-        await joinSocket.send(joinMsg)
+        await joinSocket.send(ClusterMessageFactory.toString(joinMsg))
         data = await joinSocket.recv()
-        respMsg = ClusterMessageFactory.newFromString(data)
-        joinAccept = JoinAccept()
-        respMsg.message.Unpack(joinAccept)
-        self.mesh.neighborManager.updateWithNetworkView( NetworkView.fromProto(joinAccept.networkView) )
-        return respMsg
+        joinAccept = ClusterMessageFactory.fromString(data)
+        if not isinstance(joinAccept, JoinAccept):
+            print(f"Expected JoinAccept message but received {type(joinAccept)}")
+            raise Exception()
+        self.mesh.updateWithNetworkView( NetworkView.fromProto(joinAccept.networkView) )
+        return joinAccept
 
 
     async def leave(self, cluster: Address) -> None:

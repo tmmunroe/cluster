@@ -1,6 +1,6 @@
 from src.mesh.neighborManager import NeighborManager
 from src.mesh.nodeInfo import NodeInfo, NodeHealth
-from proto.build.mesh_messages_pb2 import Gossip, NodeInfoProto
+from proto.mesh_messages_pb2 import Gossip, NodeInfoProto
 from src.mesh.messageFactory import MeshMessageFactory
 from src.common.address import Address
 from typing import Dict
@@ -31,6 +31,7 @@ class GossipManager():
             gossip_addr: Address,
             gossip_socket: zmq.Socket,
             gossip_queue: asyncio.Queue,
+            nodeInfo_queue: asyncio.Queue,
             neighborManager: NeighborManager,
             zmqContext: zmq.asyncio.Context,
             gossipConfig=GossipConfiguration()):
@@ -38,25 +39,25 @@ class GossipManager():
         self.gossip_addr = gossip_addr
         self.gossip_sock = gossip_socket
         self.gossip_queue = gossip_queue
+        self.nodeInfo_queue = nodeInfo_queue
         self.neighborManager = neighborManager
         self.zmqContext = zmqContext
         self.config = gossipConfig
         self.connectionConfig = gossipConfig.connectionConfig
         self.alreadyGossiping: Dict[str,float] = {}
 
-
+    
+    
     def consume_gossip(self, gossip: Gossip) -> bool:
         '''returns a bool denoting whether or not
            to propagate this gossip'''
-        if gossip.gossipId in self.alreadyGossiping:
-            return False
-
         if gossip.message.Is(NodeInfoProto.DESCRIPTOR):
             nodeInfoProto = NodeInfoProto()
             gossip.message.Unpack(nodeInfoProto)
             nodeInfo = NodeInfo.fromProto(nodeInfoProto)
-            self.neighborManager.updateWithNodeInfo(nodeInfo)
+            print(f"GOSSIP ABOUT nodeInfo {nodeInfo.addr}")
 
+            self.loop.create_task(self.nodeInfo_queue.put(nodeInfo))
             '''if this is gossip about us, and it says we're not alive, we
                 will not propagate this'''
             if nodeInfo.isSameNodeAs(self.localNode) and nodeInfo.health != NodeHealth.ALIVE:
@@ -70,7 +71,6 @@ class GossipManager():
 
 
     def flushAlreadyGossiping(self):
-        print("FLUSHING ALREADY GOSSIPING")
         receivedAtLimit = time.time() - self.config.alreadyGossipingRetention
         for key, receivedAt in self.alreadyGossiping.items():
             if receivedAt < receivedAtLimit:
@@ -79,29 +79,31 @@ class GossipManager():
 
     async def handle_gossip(self, data: str) -> None:
         '''decode msg'''
-        gossip = MeshMessageFactory.newFromString(data)
-        if not gossip.Is(Gossip.DESCRIPTOR):
+        gossip: Gossip = MeshMessageFactory.fromString(data)
+        if not isinstance(gossip,Gossip):
             print("ERROR: Received unexpected message on Gossip stream")
             return None
     
         '''unpack gossip'''
+        print(f"Consuming gossip")
         should_gossip = self.consume_gossip(gossip)
 
         '''if any remaining sends, then put gossip on queue'''
         if gossip.remainingSends > 0 and should_gossip:
+            print(f"Enqueuing gossip")
             gossip.remainingSends = gossip.remainingSends - 1
-            await self.gossip_queue.put(gossip.SerializeToString())
+            await self.gossip_queue.put( MeshMessageFactory.toString(gossip) )
 
 
     async def gossip_to(self, recipient:NodeInfo, data:str) -> None:
-        print(f"GOSSIPING TO {recipient.name} : {recipient.gossip_addr}!!!!")
         addr = f"tcp://{recipient.gossip_addr}"
+        print(f"Gossiping to {addr}")
         sock = self.zmqContext.socket(zmq.PUSH)
         sock.connect(addr)
         await sock.send(data)
         sock.close()
-        print(f"SENT GOSSIP TO {recipient.name} : {recipient.gossip_addr}!!!!")
-
+        print(f"GOSSIP SENT!!!")
+        return None
 
     def setLocalNodeInfo(self, nodeInfo: NodeInfo) -> None:
         self.localNode = nodeInfo
@@ -111,6 +113,7 @@ class GossipManager():
         '''bind to pull socket, record gossip address, and then loop forever.. '''
         while True:
             data = await self.gossip_sock.recv()
+            print(f"Received gossip from NETWORK")
             self.loop.create_task(self.handle_gossip(data))
 
 
@@ -118,10 +121,12 @@ class GossipManager():
         '''loop forever..
         there should be some periodicity in sends so that if a lot of gossip exists,
         it can be packaged together... for now we just send one msg though'''
+        print(f"STARTING GOSSIP LOOP - gossip interval: {self.config.gossipInterval}")
         while True:
             await asyncio.sleep(self.config.gossipInterval)
             '''create message'''
             data = await self.gossip_queue.get()
+            print(f"Gossiping...")
             self.gossip_queue.task_done()
 
             '''get recipients'''
@@ -130,7 +135,8 @@ class GossipManager():
             if len(nodeInfos) == 0:
                 print("Waiting for others to join cluster...")
                 return None
-            
+
+            print(f"Getting recipients...")
             fanout = min(self.config.fanout, len(nodeInfos))
             recipients = random.sample(population=nodeInfos, k=fanout)
             '''create tasks to send messages to recipients'''

@@ -1,12 +1,13 @@
-from proto.build.mesh_messages_pb2 import Ping, PingReq, Ack, NodeInfoProto, NetworkView, Gossip
+from proto.mesh_messages_pb2 import Ping, PingReq, Ack, NodeInfoProto, NetworkView, Gossip
 from src.common.address import Address
 from src.mesh.nodeInfo import NodeInfo
 from uuid import uuid4
+from src.common.messageFactory import MessageFactory
 
 class UnsupportedMessageType(Exception):
     pass
 
-class MeshMessageFactory():
+class MeshMessageFactory(MessageFactory):
     messageClasses = [
         Ping,
         PingReq,
@@ -15,17 +16,6 @@ class MeshMessageFactory():
         NetworkView,
         Gossip
     ]
-
-    @classmethod
-    def newFromString(self, data):
-        message = None
-        for messageClass in messageClasses:
-            if ( data.Is(messageClass.DESCRIPTOR) ):
-                message = messageClass
-                break
-        else:
-            raise UnsupportedMessageType()
-        message.ParseFromString(data)
 
     @classmethod
     def newGossipMessage(self, nodeInfo: NodeInfo):

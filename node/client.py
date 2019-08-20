@@ -68,7 +68,7 @@ class ClientNode(Node):
 
             print("Waiting for response...")
             data = clientSock.recv()
-            msg = MessageFactory.newFromString(data)
+            msg = MessageFactory.fromString(data)
             echo_msg = self.serviceManager.unpackServiceResponse(msg.message)
             print(f"Received: : {echo_msg}")
 
@@ -80,7 +80,7 @@ class ClientNode(Node):
 
             print("Waiting for response...")
             data = clientSock.recv()
-            msg = MessageFactory.newFromString(data)
+            msg = MessageFactory.fromString(data)
             add_msg = self.serviceManager.unpackServiceResponse(msg.message)
             print(f"Received: {add_msg}")
 

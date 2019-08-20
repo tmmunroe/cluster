@@ -9,60 +9,15 @@ import abc
 import logging
 import asyncio
 
-'''Define delegate callable
-name, address, incarnation, health'''
-NodeHealthChangeDelegate = Callable[[NodeInfo], Awaitable]
-RefuteNotAliveDelegate = Callable[[], Awaitable]
-NewNodeDelegate = Callable[[NodeInfo], Awaitable]
-
 
 '''NeighborManager controls the local view of the network topology;
 it is responsible for state change messages about Nodes in the network,
 and notifying any subscribers to those state changes'''
 class NeighborManager():
     def __init__(self, networkView: NetworkView = NetworkView()):
-        self.reportViewPeriod = 10
+        self.reportViewPeriod = 5
         self.networkView = networkView
-        self.nodeHealthChangeDelegates: List[ NodeHealthChangeDelegate ] = []
-        self.refuteNotAliveDelegates: List[ RefuteNotAliveDelegate ] = []
-        self.newNodeDelegates: List[ NewNodeDelegate ] = []
         self.logger = logging.Logger('NeighborManager')
-
-    def addNodeHealthChangeDelegate(self, delegate: Callable):
-        self.nodeHealthChangeDelegates.append(delegate)
-        return None
-
-    def removeNodeHealthChangeDelegate(self, delegate: Callable):
-        try:
-            self.nodeHealthChangeDelegates.remove(delegate)
-        except ValueError:
-            print(f"Delegate {delegate} did not exist")
-        return None
-    
-
-    def addRefuteNotAliveDelegates(self, delegate: Callable):
-        self.refuteNotAliveDelegates.append(delegate)
-        return None
-
-    def removeRefuteNotAliveDelegates(self, delegate: Callable):
-        try:
-            self.refuteNotAliveDelegates.remove(delegate)
-        except ValueError:
-            print(f"Delegate {delegate} did not exist")
-        return None
-    
-
-    def addNewNodeDelegates(self, delegate: Callable):
-        self.newNodeDelegates.append(delegate)
-        return None
-
-    def removeNewNodeDelegates(self, delegate: Callable):
-        try:
-            self.newNodeDelegates.remove(delegate)
-        except ValueError:
-            print(f"Delegate {delegate} did not exist")
-        return None
-
 
     def setLocalNodeInfo(self, nodeInfo: NodeInfo) -> None:
         self.localNode = nodeInfo
@@ -70,7 +25,6 @@ class NeighborManager():
 
     def registerNode(self, nodeInfo: NodeInfo) -> None:
         self.networkView[nodeInfo.name] = nodeInfo
-        self.onNewNode(nodeInfo)
         return None
 
     def deregisterNode(self, name: str) -> NodeInfo:
@@ -87,58 +41,24 @@ class NeighborManager():
     def getNodeInfos(self) -> ValuesView:
         return self.networkView.values()
 
-    def setNodeHealth(self, name:str , health: NodeHealth, incarnation: int) -> None:
+    def getNetworkView(self) -> NetworkView:
+        return self.networkView
+
+    def setNodeHealth(self, name:str , health: NodeHealth, incarnation: int) -> bool:
         nodeInfo = self.getNodeInfo(name)
         if (nodeInfo and (nodeInfo.health != health) and (nodeInfo.incarnation <= incarnation)):
             nodeInfo.health = health
             nodeInfo.incarnation = incarnation
-            self.onNodeHealthChange(nodeInfo)
-        return None
+            return True
+        return False
 
 
-    def setNodeHealthFromNodeInfo(self, nodeInfo: NodeInfo) -> None:
+    def setNodeHealthFromNodeInfo(self, nodeInfo: NodeInfo) -> bool:
         return self.setNodeHealth(nodeInfo.name, nodeInfo.health, nodeInfo.incarnation)
 
 
-    def onNodeHealthChange(self, nodeInfo: NodeInfo) -> None:
-        for delegate in self.nodeHealthChangeDelegates:
-            asyncio.create_task(delegate(nodeInfo))
-        return None
-    
-
-    def onNewNode(self, nodeInfo: NodeInfo) -> None:
-        for delegate in self.newNodeDelegates:
-            asyncio.create_task(delegate(nodeInfo))
-        return None
-
-
-    def refuteNotAlive(self) -> None:
-        for delegate in self.refuteNotAliveDelegates:
-            asyncio.create_task(delegate())
-        return None
-
-
-    def updateWithNodeInfo(self, nodeInfo:NodeInfo) -> None:
-        if nodeInfo.isSameNodeAs(self.localNode):
-            if nodeInfo.health != NodeHealth.ALIVE:
-                self.refuteNotAlive()
-        else:
-            myNodeInfo = self.getNodeInfo(nodeInfo.name)
-            if myNodeInfo is None:
-                self.registerNode(nodeInfo)
-            else:
-                self.setNodeHealthFromNodeInfo(nodeInfo)
-        return None
-
-
-    def updateWithNetworkView(self, networkView:NetworkView):
-        for _,nodeInfo in networkView.items():
-            self.updateWithNodeInfo(nodeInfo)
-        return None
-
-
     def reportState(self):
-        nameAndAddr = lambda nodeInfo: f"  {nodeInfo.name}  @  {nodeInfo.addr}  : {nodeInfo.health.name} {nodeInfo.incarnation}"
+        nameAndAddr = lambda nodeInfo: f"  {nodeInfo.name}  @  {nodeInfo.addr}  gossip: {nodeInfo.gossip_addr} : {nodeInfo.health.name} {nodeInfo.incarnation}"
         print("NeighborManager state:")
         print(f"  LocalNode: {nameAndAddr(self.localNode)}")
         print(f"  Neighbors:")

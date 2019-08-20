@@ -9,7 +9,7 @@ class Address():
     def __repr__(self):
         return f"Address({self.host}, {self.port})"
 
-    def __eq__(self, other: object):
+    def __eq__(self, other):
         return (self.host == other.host) and (self.port == other.port)
 
     def packProtoAddress(self, protoAddr):

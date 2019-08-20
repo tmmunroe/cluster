@@ -5,7 +5,7 @@ import asyncio
 import zmq.asyncio
 from src.common.address import Address
 from src.service.serviceProxy import ServiceProxyConfig
-from proto.build.service_messages_pb2 import ServiceRequest, ServiceResponse
+from proto.service_messages_pb2 import ServiceRequest, ServiceResponse
 
 class ServiceMethodNotFound(Exception):
     pass

@@ -46,13 +46,14 @@ class ManagerNode(Node):
     async def handle_new_joiner(self, data) -> None:
         routing_addr, empty, msg = data
 
-        msg = ClusterMessageFactory.newFromString(msg)
-        nodeInfo = NodeInfo.fromProto(msg.senderInfo)
+        msg = ClusterMessageFactory.fromString(msg)
+        nodeInfo = NodeInfo.fromProto(msg.nodeInfo)
+        print(f"Handling new Joiner {msg.nodeInfo}")
         self.mesh.registerNode(nodeInfo)
 
         '''create full response message, serialize, and send'''
-        joinAcceptMessage = ClusterMessageFactory.newJoinAcceptMessage(self.mesh.localNode, self.mesh.getNodeInfos())
-        multipart_msg = [routing_addr, empty, joinAcceptMessage.SerializeToString()]
+        joinAcceptMessage = ClusterMessageFactory.newJoinAcceptMessage(self.mesh.localNode, self.mesh.getNetworkView())
+        multipart_msg = [routing_addr, empty, ClusterMessageFactory.toString(joinAcceptMessage)]
         await self.joiners.send_multipart(multipart_msg)
         return None
 
